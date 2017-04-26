@@ -25,38 +25,12 @@ from cloudify.exceptions import NonRecoverableError
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
 
+from cloudify_boto3.common.tests.test_base import TestBase
+
 # Constants
 SUBNET_GROUP_TH = ['cloudify.nodes.Root', 'cloudify.nodes.aws.rds.SubnetGroup']
 
-class TestRDSSubnetGroup(unittest.TestCase):
-
-    def tearDown(self):
-        current_ctx.clear()
-        super(TestRDSSubnetGroup, self).tearDown()
-
-    def get_mock_ctx(self,
-                     test_name,
-                     test_properties):
-
-        test_node_id = test_name
-        test_properties = test_properties
-
-        ctx = MockCloudifyContext(
-            node_id=test_node_id,
-            deployment_id=test_name,
-            properties=test_properties
-        )
-
-        ctx.node.type_hierarchy = SUBNET_GROUP_TH
-
-        return ctx
-
-    def fake_boto_client(self, client_type):
-        fake_client = MagicMock()
-        if client_type == "rds":
-            fake_client.create_db_subnet_group = MagicMock(side_effect=UnknownServiceError(service_name=client_type, known_service_names=['rds']))
-            fake_client.describe_db_subnet_groups = MagicMock(side_effect=ClientError(error_response={"Error": {}}, operation_name="describe_db_subnet_groups"))
-        return MagicMock(return_value=fake_client), fake_client
+class TestRDSSubnetGroup(TestBase):
 
     def test_create_raises_UnknownServiceError(self):
         _test_name = 'test_create'
@@ -64,7 +38,7 @@ class TestRDSSubnetGroup(unittest.TestCase):
             'use_external_resource': False
         }
         _test_instance_runtime_properties = {}
-        _ctx = self.get_mock_ctx(_test_name, _test_node_properties)
+        _ctx = self.get_mock_ctx(_test_name, _test_node_properties, SUBNET_GROUP_TH)
         current_ctx.set(_ctx)
         fake_boto, fake_client = self.fake_boto_client('rds')
         with patch('boto3.client', fake_boto):
