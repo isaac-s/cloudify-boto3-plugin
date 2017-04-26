@@ -16,17 +16,19 @@ from cloudify_boto3.rds.resources import subnet_group
 import boto3
 
 from mock import patch, MagicMock
-import testtools
+import unittest
 
 from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
+from cloudify import exceptions as cfy_exc
 from cloudify.exceptions import NonRecoverableError
 from botocore.exceptions import UnknownServiceError
+from botocore.exceptions import ClientError
 
 # Constants
 SUBNET_GROUP_TH = ['cloudify.nodes.Root', 'cloudify.nodes.aws.rds.SubnetGroup']
 
-class TestRDSSubnetGroup(testtools.TestCase):
+class TestRDSSubnetGroup(unittest.TestCase):
 
     def tearDown(self):
         current_ctx.clear()
@@ -52,16 +54,30 @@ class TestRDSSubnetGroup(testtools.TestCase):
     def fake_boto_client(self, client_type):
         fake_client = MagicMock()
         if client_type == "rds":
-            fake_client.create_db_subnet_group = MagicMock(side_effect = UnknownServiceError(service_name=client_type, known_service_names=['rds']))
-        return fake_client
+            fake_client.create_db_subnet_group = MagicMock(side_effect=UnknownServiceError(service_name=client_type, known_service_names=['rds']))
+            fake_client.describe_db_subnet_groups = MagicMock(side_effect=ClientError(error_response={"Error": {}}, operation_name="describe_db_subnet_groups"))
+        return MagicMock(return_value=fake_client), fake_client
 
     def test_create_raises_UnknownServiceError(self):
         _test_name = 'test_create'
-        _test_node_properties = {}
+        _test_node_properties = {
+            'use_external_resource': False
+        }
         _test_instance_runtime_properties = {}
         _ctx = self.get_mock_ctx(_test_name, _test_node_properties)
         current_ctx.set(_ctx)
-        fake_client = self.fake_boto_client('rds')
-        with patch('boto3.client', fake_client):
-            output = subnet_group.create(ctx=_ctx)
-            self.assertIn(None, output)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            with self.assertRaises(NonRecoverableError) as error:
+                subnet_group.create(ctx=_ctx)
+
+            # RDS Subnet Group ID# "None" no longer exists...
+            self.assertFalse(str(error.exception).find(
+                'no longer exists'
+            ) == -1)
+
+            fake_boto.assert_called_with('rds', region_name=None)
+
+
+if __name__ == '__main__':
+    unittest.main()
