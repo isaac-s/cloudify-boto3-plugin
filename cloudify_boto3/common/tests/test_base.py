@@ -12,16 +12,11 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 
-from cloudify_boto3.rds.resources import subnet_group
-import boto3
-
-from mock import patch, MagicMock
+from mock import MagicMock
 import unittest
 
 from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
-from cloudify import exceptions as cfy_exc
-from cloudify.exceptions import NonRecoverableError
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
 
@@ -53,6 +48,16 @@ class TestBase(unittest.TestCase):
     def fake_boto_client(self, client_type):
         fake_client = MagicMock()
         if client_type == "rds":
-            fake_client.create_db_subnet_group = MagicMock(side_effect=UnknownServiceError(service_name=client_type, known_service_names=['rds']))
-            fake_client.describe_db_subnet_groups = MagicMock(side_effect=ClientError(error_response={"Error": {}}, operation_name="describe_db_subnet_groups"))
+            fake_client.create_db_subnet_group = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
+            fake_client.describe_db_subnet_groups = MagicMock(
+                side_effect=ClientError(
+                    error_response={"Error": {}},
+                    operation_name="describe_db_subnet_groups"
+                )
+            )
         return MagicMock(return_value=fake_client), fake_client

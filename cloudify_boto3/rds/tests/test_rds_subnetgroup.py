@@ -13,22 +13,18 @@
 #    * limitations under the License.
 
 from cloudify_boto3.rds.resources import subnet_group
-import boto3
 
-from mock import patch, MagicMock
+from mock import patch
 import unittest
 
-from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
-from cloudify import exceptions as cfy_exc
 from cloudify.exceptions import NonRecoverableError
-from botocore.exceptions import UnknownServiceError
-from botocore.exceptions import ClientError
 
 from cloudify_boto3.common.tests.test_base import TestBase
 
 # Constants
 SUBNET_GROUP_TH = ['cloudify.nodes.Root', 'cloudify.nodes.aws.rds.SubnetGroup']
+
 
 class TestRDSSubnetGroup(TestBase):
 
@@ -37,8 +33,8 @@ class TestRDSSubnetGroup(TestBase):
         _test_node_properties = {
             'use_external_resource': False
         }
-        _test_instance_runtime_properties = {}
-        _ctx = self.get_mock_ctx(_test_name, _test_node_properties, SUBNET_GROUP_TH)
+        _ctx = self.get_mock_ctx(_test_name, _test_node_properties,
+                                 SUBNET_GROUP_TH)
         current_ctx.set(_ctx)
         fake_boto, fake_client = self.fake_boto_client('rds')
         with patch('boto3.client', fake_boto):
