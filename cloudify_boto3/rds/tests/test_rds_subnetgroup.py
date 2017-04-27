@@ -13,6 +13,7 @@
 #    * limitations under the License.
 
 from cloudify_boto3.rds.resources import subnet_group
+from botocore.exceptions import UnknownServiceError
 
 from mock import patch
 import unittest
@@ -33,18 +34,24 @@ class TestRDSSubnetGroup(TestBase):
         _test_node_properties = {
             'use_external_resource': False
         }
-        _ctx = self.get_mock_ctx(_test_name, _test_node_properties,
-                                 SUBNET_GROUP_TH)
+        _test_runtime_properties = {
+            'resource_config': {}
+        }
+        _ctx = self.get_mock_ctx(_test_name,
+                                 test_properties=_test_node_properties,
+                                 test_runtime_properties=_test_runtime_properties,
+                                 type_hierarchy=SUBNET_GROUP_TH)
         current_ctx.set(_ctx)
         fake_boto, fake_client = self.fake_boto_client('rds')
         with patch('boto3.client', fake_boto):
-            with self.assertRaises(NonRecoverableError) as error:
+            with self.assertRaises(UnknownServiceError) as error:
                 subnet_group.create(ctx=_ctx)
 
             # RDS Subnet Group ID# "None" no longer exists...
-            self.assertFalse(str(error.exception).find(
-                'no longer exists'
-            ) == -1)
+            self.assertEqual(
+                str(error.exception),
+                "Unknown service: 'rds'. Valid service names are: ['rds']"
+            )
 
             fake_boto.assert_called_with('rds', region_name=None)
 

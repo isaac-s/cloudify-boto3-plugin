@@ -29,17 +29,17 @@ class TestBase(unittest.TestCase):
 
     def get_mock_ctx(self,
                      test_name,
-                     test_properties,
-                     test_runtime_properties,
-                     type_hierarchy):
-
-        test_node_id = test_name
+                     test_properties=None,
+                     test_runtime_properties=None,
+                     type_hierarchy=None):
 
         ctx = MockCloudifyContext(
-            node_id=test_node_id,
+            node_id=test_name,
             deployment_id=test_name,
             properties=test_properties,
-            runtime_properties=test_runtime_properties)
+            runtime_properties=test_runtime_properties,
+            operation={'retry_number': 0}
+        )
 
         ctx.node.type_hierarchy = type_hierarchy
 
