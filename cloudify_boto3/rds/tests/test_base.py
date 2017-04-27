@@ -14,14 +14,14 @@
 
 import unittest
 from cloudify_boto3.common.tests.test_base import TestBase
-from cloudify_boto3.lambda_serverless import LambdaBase
+from cloudify_boto3.rds import RDSBase
 
 
-class TestLambdaBase(TestBase):
+class TestRDSBase(TestBase):
 
     def setUp(self):
-        self.base = LambdaBase("ctx_node", resource_id=True,
-                               client=True, logger=None)
+        self.base = RDSBase("ctx_node", resource_id=True,
+                            client=True, logger=None)
 
     def test_properties(self):
         with self.assertRaises(NotImplementedError):

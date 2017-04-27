@@ -64,6 +64,36 @@ class TestBase(unittest.TestCase):
     def fake_boto_client(self, client_type):
         fake_client = MagicMock()
         if client_type == "rds":
+            fake_client.create_db_parameter_group = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
+            fake_client.create_option_group = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
+            fake_client.describe_option_groups = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
+            fake_client.create_db_instance_read_replica = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
+            fake_client.create_db_instance = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
             fake_client.create_db_subnet_group = MagicMock(
                 side_effect=UnknownServiceError(
                     service_name=client_type,
