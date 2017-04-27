@@ -29,20 +29,36 @@ class TestBase(unittest.TestCase):
 
     def get_mock_ctx(self,
                      test_name,
-                     test_properties,
-                     type_hierarchy):
-
-        test_node_id = test_name
-        test_properties = test_properties
+                     test_properties=None,
+                     test_runtime_properties=None,
+                     type_hierarchy=None):
 
         ctx = MockCloudifyContext(
-            node_id=test_node_id,
+            node_id=test_name,
             deployment_id=test_name,
-            properties=test_properties
+            properties=test_properties,
+            runtime_properties=test_runtime_properties,
+            operation={'retry_number': 0}
         )
 
         ctx.node.type_hierarchy = type_hierarchy
 
+        return ctx
+
+    def get_mock_relationship_ctx(self,
+                                  deployment_name,
+                                  test_properties,
+                                  test_runtime_properties,
+                                  test_source,
+                                  test_target,
+                                  type_hierarchy):
+
+        ctx = MockCloudifyContext(
+            deployment_id=deployment_name,
+            properties=test_properties,
+            source=test_source,
+            target=test_target,
+            runtime_properties=test_runtime_properties)
         return ctx
 
     def fake_boto_client(self, client_type):
