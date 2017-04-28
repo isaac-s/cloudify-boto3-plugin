@@ -20,6 +20,8 @@ from cloudify.state import current_ctx
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
 
+from cloudify_boto3.common import AWSResourceBase
+
 
 class TestBase(unittest.TestCase):
 
@@ -163,3 +165,10 @@ class TestServiceBase(TestBase):
             return
         with self.assertRaises(NotImplementedError):
             self.base.delete(None)
+
+
+class TestAWSResourceBase(TestServiceBase):
+
+    def setUp(self):
+        self.base = AWSResourceBase("ctx_node", resource_id=True,
+                                    logger=None)
