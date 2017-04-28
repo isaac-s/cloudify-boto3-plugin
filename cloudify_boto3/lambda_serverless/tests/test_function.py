@@ -20,8 +20,10 @@ from cloudify_boto3.common.tests.test_base import TestBase
 from functools import wraps
 
 # Constants
-SUBNET_GROUP_I = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Invoke']
-SUBNET_GROUP_F = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Function']
+SUBNET_GROUP_I = ['cloudify.nodes.Root',
+                  'cloudify.nodes.aws.lambda.Invoke']
+SUBNET_GROUP_F = ['cloudify.nodes.Root',
+                  'cloudify.nodes.aws.lambda.Function']
 
 
 def mock_decorator(*args, **kwargs):
@@ -177,11 +179,12 @@ class TestLambdaFunction(TestBase):
 
     def test_create(self):
         ctx = self._get_ctx()
-        with patch('cloudify_boto3.common.decorators.aws_resource',
-                   mock_decorator),\
-            patch(
-                'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(
+            'cloudify_boto3.common.decorators.aws_resource',
+            mock_decorator), patch(
+            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
+            MagicMock()
+        ):
             fun = function.LambdaFunction(ctx)
             reload(function)
             fun.logger = MagicMock()
@@ -194,14 +197,17 @@ class TestLambdaFunction(TestBase):
             function.create(ctx, fun, {})
 
     def test_delete(self):
-        with patch('cloudify_boto3.common.decorators.wait_for_delete',
-                   mock_decorator),\
-             patch('cloudify_boto3.common.decorators.aws_resource',
-                   mock_decorator):
+        with patch(
+            'cloudify_boto3.common.decorators.wait_for_delete',
+            mock_decorator), patch(
+            'cloudify_boto3.common.decorators.aws_resource',
+            mock_decorator
+        ):
             reload(function)
             iface = MagicMock()
             function.delete(iface, None)
             self.assertTrue(iface.delete.called)
+
 
 if __name__ == '__main__':
     unittest.main()
