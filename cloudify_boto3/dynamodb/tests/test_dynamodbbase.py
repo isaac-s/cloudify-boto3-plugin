@@ -14,14 +14,14 @@
 
 import unittest
 from cloudify_boto3.common.tests.test_base import TestServiceBase
-from cloudify_boto3.rds import RDSBase
+from cloudify_boto3.dynamodb import DynamoDBBase
 
 
-class TestRDSBase(TestServiceBase):
+class TestDynamoDBBase(TestServiceBase):
 
     def setUp(self):
-        self.base = RDSBase("ctx_node", resource_id=True,
-                            client=True, logger=None)
+        self.base = DynamoDBBase("ctx_node", resource_id=True,
+                                 client=True, logger=None)
 
 
 if __name__ == '__main__':

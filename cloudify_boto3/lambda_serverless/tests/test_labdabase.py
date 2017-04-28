@@ -13,31 +13,15 @@
 #    * limitations under the License.
 
 import unittest
-from cloudify_boto3.common.tests.test_base import TestBase
+from cloudify_boto3.common.tests.test_base import TestServiceBase
 from cloudify_boto3.lambda_serverless import LambdaBase
 
 
-class TestLambdaBase(TestBase):
+class TestLambdaBase(TestServiceBase):
 
     def setUp(self):
         self.base = LambdaBase("ctx_node", resource_id=True,
                                client=True, logger=None)
-
-    def test_properties(self):
-        with self.assertRaises(NotImplementedError):
-            self.base.properties()
-
-    def test_status(self):
-        with self.assertRaises(NotImplementedError):
-            self.base.status()
-
-    def test_create(self):
-        with self.assertRaises(NotImplementedError):
-            self.base.create(None)
-
-    def test_delete(self):
-        with self.assertRaises(NotImplementedError):
-            self.base.delete(None)
 
 
 if __name__ == '__main__':

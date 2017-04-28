@@ -107,3 +107,32 @@ class TestBase(unittest.TestCase):
                 )
             )
         return MagicMock(return_value=fake_client), fake_client
+
+
+class TestServiceBase(TestBase):
+
+    base = None
+
+    def test_properties(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.properties()
+
+    def test_status(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.status()
+
+    def test_create(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.create(None)
+
+    def test_delete(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.delete(None)
