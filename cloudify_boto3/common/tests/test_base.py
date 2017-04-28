@@ -106,6 +106,12 @@ class TestBase(unittest.TestCase):
                     operation_name="describe_db_subnet_groups"
                 )
             )
+            fake_client.delete_db_subnet_group = MagicMock(
+                side_effect=ClientError(
+                    error_response={"Error": {}},
+                    operation_name="describe_db_subnet_groups"
+                )
+            )
 
     def make_client_function(self, fun_name,
                              return_value=None,
