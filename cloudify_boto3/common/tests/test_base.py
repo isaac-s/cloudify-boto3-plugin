@@ -61,9 +61,7 @@ class TestBase(unittest.TestCase):
             runtime_properties=test_runtime_properties)
         return ctx
 
-    def fake_boto_client(self, client_type):
-        fake_client = MagicMock()
-        if client_type == "rds":
+    def _fake_rds(self, fake_client, client_type):
             fake_client.create_db_parameter_group = MagicMock(
                 side_effect=UnknownServiceError(
                     service_name=client_type,
@@ -106,6 +104,35 @@ class TestBase(unittest.TestCase):
                     operation_name="describe_db_subnet_groups"
                 )
             )
+
+    def make_client_function(self, fun_name,
+                             return_value=None,
+                             side_effect=None,
+                             client=None):
+        if client:
+            fake_client = client
+        else:
+            fake_client = MagicMock()
+        fun = getattr(fake_client, fun_name)
+        if side_effect is not None:
+            fun.side_effect = side_effect
+        elif return_value is not None:
+            fun.return_value = return_value
+        return fake_client
+
+    def get_client_error_exception(self, name):
+        return ClientError(error_response={"Error": {}},
+                           operation_name=name)
+
+    def get_unknown_service_exception(self, name):
+        return UnknownServiceError(
+            service_name=name,
+            known_service_names=[name])
+
+    def fake_boto_client(self, client_type):
+        fake_client = MagicMock()
+        if client_type == "rds":
+            self._fake_rds(fake_client, client_type)
         return MagicMock(return_value=fake_client), fake_client
 
 
