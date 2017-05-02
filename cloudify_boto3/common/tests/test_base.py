@@ -31,6 +31,7 @@ class TestBase(unittest.TestCase):
                      test_name,
                      test_properties=None,
                      test_runtime_properties=None,
+                     test_relationships=None,
                      type_hierarchy=None):
 
         ctx = MockCloudifyContext(
@@ -38,6 +39,7 @@ class TestBase(unittest.TestCase):
             deployment_id=test_name,
             properties=test_properties,
             runtime_properties=test_runtime_properties,
+            relationships=test_relationships,
             operation={'retry_number': 0}
         )
 

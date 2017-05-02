@@ -18,7 +18,9 @@ from io import StringIO
 from cloudify.manager import DirtyTrackingDict
 from cloudify_boto3.common.tests.test_base import TestBase
 from functools import wraps
+from cloudify.mocks import MockCloudifyContext, MockRelationshipContext
 
+PATCH_PREFIX = 'cloudify_boto3.lambda_serverless.resources.function.'
 # Constants
 SUBNET_GROUP_I = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Invoke']
 SUBNET_GROUP_F = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Function']
@@ -37,6 +39,13 @@ class TestLambdaFunction(TestBase):
 
     def setUp(self):
         super(TestLambdaFunction, self).setUp()
+        mock1 = patch('cloudify_boto3.common.decorators.aws_resource',
+                      mock_decorator)
+        mock2 = patch('cloudify_boto3.common.decorators.wait_for_delete',
+                      mock_decorator)
+        mock1.start()
+        mock2.start()
+        reload(function)
 
     def _get_relationship_context(self, subnet_group):
         _test_name = 'test_lambda'
@@ -176,14 +185,16 @@ class TestLambdaFunction(TestBase):
             self.assertEqual(result, '')
 
     def test_create(self):
-        ctx = self._get_ctx()
-        with patch('cloudify_boto3.common.decorators.aws_resource',
-                   mock_decorator),\
-            patch(
-                'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        subnettarget = MockRelationshipContext(
+            target=MockCloudifyContext('subnet'))
+        subnettarget.target.node.type_hierarchy = ['cloudify.aws.nodes.Subnet']
+        ctx = MockCloudifyContext("test_create")
+        with patch(PATCH_PREFIX + 'LambdaBase'),\
+            patch(PATCH_PREFIX + 'utils') as utils,\
+            patch(PATCH_PREFIX + 'path_exists', MagicMock(return_value=True)),\
+            patch(PATCH_PREFIX + 'open',
+                  MagicMock(return_value=StringIO(u"test"))):
             fun = function.LambdaFunction(ctx)
-            reload(function)
             fun.logger = MagicMock()
             fun.resource_id = 'test_function'
             fake_client = self.make_client_function(
@@ -191,7 +202,18 @@ class TestLambdaFunction(TestBase):
                 return_value={'FunctionArn': 'test_function_arn',
                               'FunctionName': 'test_function'})
             fun.client = fake_client
-            function.create(ctx, fun, {})
+            resource_config = {'VpcConfig': {'SubnetIds': []},
+                               'Code': {'ZipFile': True}}
+            utils.find_rels_by_node_type = MagicMock(
+                return_value=[subnettarget])
+            utils.get_resource_id = MagicMock(return_value='test_id')
+            utils.find_rel_by_node_type = MagicMock(return_value=subnettarget)
+            utils.get_resource_id = MagicMock(return_value='Role')
+            function.create(ctx, fun, resource_config)
+            self.assertEqual('test', resource_config['Code']['ZipFile'])
+            self.assertEqual({'SubnetIds': ['Role'],
+                              'SecurityGroupIds': ['Role']},
+                             resource_config['VpcConfig'])
 
     def test_delete(self):
         with patch('cloudify_boto3.common.decorators.wait_for_delete',
