@@ -118,6 +118,12 @@ class TestBase(unittest.TestCase):
                     known_service_names=['rds']
                 )
             )
+            fake_client.modify_db_parameter_group = MagicMock(
+                side_effect=UnknownServiceError(
+                    service_name=client_type,
+                    known_service_names=['rds']
+                )
+            )
             fake_client.create_db_subnet_group = MagicMock(
                 side_effect=UnknownServiceError(
                     service_name=client_type,

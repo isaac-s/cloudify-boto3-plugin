@@ -191,16 +191,16 @@ class TestRDSSubnetGroup(TestBase):
                 }
             )
 
-    def _reprepere_relation_ships(self, node_id):
+    def _create_subnet_relationships(self, node_id):
         _source_ctx = self.get_mock_ctx(
-            'test_prepare_assoc_source',
+            'test_assoc_source',
             test_properties=NODE_PROPERTIES,
             test_runtime_properties=RUNTIME_PROPERTIES,
             type_hierarchy=SUBNET_GROUP_TH
         )
 
         _target_ctx = self.get_mock_ctx(
-            'test_prepare_assoc_target',
+            'test_assoc_target',
             test_properties={},
             test_runtime_properties={
                 'resource_id': 'prepare_assoc_resource',
@@ -223,7 +223,7 @@ class TestRDSSubnetGroup(TestBase):
         return _source_ctx, _target_ctx, _ctx
 
     def test_prepare_assoc(self):
-        _source_ctx, _target_ctx, _ctx = self._reprepere_relation_ships(
+        _source_ctx, _target_ctx, _ctx = self._create_subnet_relationships(
             'test_prepare_assoc'
         )
         current_ctx.set(_ctx)
@@ -246,7 +246,7 @@ class TestRDSSubnetGroup(TestBase):
             })
 
     def test_detach_from(self):
-        _source_ctx, _target_ctx, _ctx = self._reprepere_relation_ships(
+        _source_ctx, _target_ctx, _ctx = self._create_subnet_relationships(
             'test_detach_from'
         )
         current_ctx.set(_ctx)
