@@ -18,18 +18,26 @@ from mock import patch, MagicMock
 import unittest
 
 from cloudify.manager import DirtyTrackingDict
-
-from cloudify_boto3.common.tests.test_base import TestBase
+from cloudify_boto3.common.tests.test_base import TestBase, mock_decorator
 
 # Constants
 SUBNET_GROUP_I = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Invoke']
 SUBNET_GROUP_F = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Function']
 
+LAMBDA_PATH = 'cloudify_boto3.lambda_serverless.resources.invoke.LambdaFunction'
+INVOKE_PATH = 'cloudify_boto3.lambda_serverless.resources.invoke.'
+
 
 class TestLambdaInvoke(TestBase):
 
     def setUp(self):
-        super(TestLambdaInvoke, self).setUp()
+        mock1 = patch('cloudify_boto3.common.decorators.aws_resource',
+                      mock_decorator)
+        mock2 = patch('cloudify_boto3.common.decorators.aws_relationship',
+                      mock_decorator)
+        mock1.start()
+        mock2.start()
+        reload(invoke)
 
     def _get_relationship_context(self, subnet_group):
         _test_name = 'test_lambda'
@@ -67,20 +75,18 @@ class TestLambdaInvoke(TestBase):
 
     def test_attach_to(self):
         relation_ctx = self._get_relationship_context(SUBNET_GROUP_F)
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.invoke.LambdaFunction',
-                MagicMock()) as mock:
+        with patch(LAMBDA_PATH) as mock, patch(INVOKE_PATH + 'utils') as utils:
+            utils.is_node_type = MagicMock(return_value=True)
             invoke.attach_to(ctx=relation_ctx, resource_config=True)
-        self.assertTrue(mock.called)
-        output = relation_ctx.source.instance.runtime_properties['output']
-        self.assertIsInstance(output, MagicMock)
+            self.assertTrue(mock.called)
+            output = relation_ctx.source.instance.runtime_properties['output']
+            self.assertIsInstance(output, MagicMock)
 
         relation_ctx = self._get_relationship_context(SUBNET_GROUP_I)
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.invoke.LambdaFunction',
-                MagicMock()) as mock:
+        with patch(LAMBDA_PATH) as mock, patch(INVOKE_PATH + 'utils') as utils:
+            utils.is_node_type = MagicMock(return_value=False)
             invoke.attach_to(ctx=relation_ctx, resource_config=True)
-        self.assertFalse(mock.called)
+            self.assertFalse(mock.called)
 
     def test_detach_from(self):
         relation_ctx = self._get_relationship_context(SUBNET_GROUP_I)

@@ -14,11 +14,21 @@
 
 from mock import MagicMock
 import unittest
+from functools import wraps
 
 from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
+
+
+def mock_decorator(*args, **kwargs):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 
 class TestBase(unittest.TestCase):

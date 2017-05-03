@@ -15,24 +15,13 @@ from mock import patch, MagicMock
 from cloudify_boto3.lambda_serverless.resources import function
 import unittest
 from io import StringIO
-from cloudify.manager import DirtyTrackingDict
-from cloudify_boto3.common.tests.test_base import TestBase
-from functools import wraps
+from cloudify_boto3.common.tests.test_base import TestBase, mock_decorator
 from cloudify.mocks import MockCloudifyContext, MockRelationshipContext
 
 PATCH_PREFIX = 'cloudify_boto3.lambda_serverless.resources.function.'
 # Constants
 SUBNET_GROUP_I = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Invoke']
 SUBNET_GROUP_F = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Function']
-
-
-def mock_decorator(*args, **kwargs):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 
 class TestLambdaFunction(TestBase):
@@ -47,27 +36,6 @@ class TestLambdaFunction(TestBase):
         mock2.start()
         reload(function)
 
-    def _get_relationship_context(self, subnet_group):
-        _test_name = 'test_lambda'
-        _test_node_properties = {
-            'use_external_resource': False,
-            'resource_id': 'target'
-        }
-        _test_runtime_properties = {'resource_config': 'resource',
-                                    '_set_changed': True}
-        source = self.get_mock_ctx("source_node", _test_node_properties,
-                                   DirtyTrackingDict(_test_runtime_properties),
-                                   SUBNET_GROUP_I)
-        target = self.get_mock_ctx("target_node", _test_node_properties,
-                                   DirtyTrackingDict(_test_runtime_properties),
-                                   subnet_group)
-        return self.get_mock_relationship_ctx(_test_name,
-                                              _test_node_properties,
-                                              _test_runtime_properties,
-                                              source,
-                                              target,
-                                              SUBNET_GROUP_F)
-
     def _get_ctx(self):
         _test_name = 'test_properties'
         _test_node_properties = {
@@ -80,9 +48,7 @@ class TestLambdaFunction(TestBase):
 
     def test_class_properties(self):
         ctx = self._get_ctx()
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(PATCH_PREFIX + 'LambdaBase'):
             fun = function.LambdaFunction(ctx)
             fun.resource_id = 'test_function'
             fake_client = self.make_client_function(
@@ -111,9 +77,7 @@ class TestLambdaFunction(TestBase):
 
     def test_class_status(self):
         ctx = self._get_ctx()
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(PATCH_PREFIX + 'LambdaBase'):
             fun = function.LambdaFunction(ctx)
             fun.resource_id = 'test_function'
             fake_client = self.make_client_function(
@@ -133,9 +97,7 @@ class TestLambdaFunction(TestBase):
 
     def test_class_create(self):
         ctx = self._get_ctx()
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(PATCH_PREFIX + 'LambdaBase'):
             fun = function.LambdaFunction(ctx)
             fun.logger = MagicMock()
             fun.resource_id = 'test_function'
@@ -150,9 +112,7 @@ class TestLambdaFunction(TestBase):
 
     def test_class_delete(self):
         ctx = self._get_ctx()
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(PATCH_PREFIX + 'LambdaBase'):
             fun = function.LambdaFunction(ctx)
             fun.logger = MagicMock()
             fun.resource_id = 'test_function'
@@ -164,9 +124,7 @@ class TestLambdaFunction(TestBase):
 
     def test_class_invoke(self):
         ctx = self._get_ctx()
-        with patch(
-            'cloudify_boto3.lambda_serverless.resources.function.LambdaBase',
-                MagicMock()):
+        with patch(PATCH_PREFIX + 'LambdaBase'):
             fun = function.LambdaFunction(ctx)
             fun.logger = MagicMock()
             fun.resource_id = 'test_function'
@@ -216,14 +174,9 @@ class TestLambdaFunction(TestBase):
                              resource_config['VpcConfig'])
 
     def test_delete(self):
-        with patch('cloudify_boto3.common.decorators.wait_for_delete',
-                   mock_decorator),\
-             patch('cloudify_boto3.common.decorators.aws_resource',
-                   mock_decorator):
-            reload(function)
-            iface = MagicMock()
-            function.delete(iface, None)
-            self.assertTrue(iface.delete.called)
+        iface = MagicMock()
+        function.delete(iface, None)
+        self.assertTrue(iface.delete.called)
 
 if __name__ == '__main__':
     unittest.main()
