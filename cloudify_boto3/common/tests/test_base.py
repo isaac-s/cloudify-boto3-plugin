@@ -21,6 +21,8 @@ from cloudify.state import current_ctx
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
 
+from cloudify_boto3.common import AWSResourceBase
+
 
 def mock_decorator(*args, **kwargs):
     def decorator(f):
@@ -116,6 +118,12 @@ class TestBase(unittest.TestCase):
                     operation_name="describe_db_subnet_groups"
                 )
             )
+            fake_client.delete_db_subnet_group = MagicMock(
+                side_effect=ClientError(
+                    error_response={"Error": {}},
+                    operation_name="describe_db_subnet_groups"
+                )
+            )
 
     def make_client_function(self, fun_name,
                              return_value=None,
@@ -146,3 +154,39 @@ class TestBase(unittest.TestCase):
         if client_type == "rds":
             self._fake_rds(fake_client, client_type)
         return MagicMock(return_value=fake_client), fake_client
+
+
+class TestServiceBase(TestBase):
+
+    base = None
+
+    def test_properties(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.properties()
+
+    def test_status(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.status()
+
+    def test_create(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.create(None)
+
+    def test_delete(self):
+        if not self.base:
+            return
+        with self.assertRaises(NotImplementedError):
+            self.base.delete(None)
+
+
+class TestAWSResourceBase(TestServiceBase):
+
+    def setUp(self):
+        self.base = AWSResourceBase("ctx_node", resource_id=True,
+                                    logger=None)

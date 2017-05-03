@@ -30,7 +30,6 @@ SUBNET_GROUP_TH = ['cloudify.nodes.Root',
 class TestRDSSubnetGroup(TestBase):
 
     def test_create_raises_UnknownServiceError(self):
-        _test_name = 'test_create_UnknownServiceError'
         _test_node_properties = {
             'use_external_resource': False
         }
@@ -38,7 +37,7 @@ class TestRDSSubnetGroup(TestBase):
             'resource_config': {}
         }
         _ctx = self.get_mock_ctx(
-            _test_name,
+            'test_create_UnknownServiceError',
             test_properties=_test_node_properties,
             test_runtime_properties=_test_runtime_properties,
             type_hierarchy=SUBNET_GROUP_TH
@@ -57,7 +56,6 @@ class TestRDSSubnetGroup(TestBase):
             fake_boto.assert_called_with('rds', region_name=None)
 
     def test_create(self):
-        _test_name = 'test_create'
         _test_node_properties = {
             'use_external_resource': False,
             'resource_id': 'zzzzzz-subnet-group',
@@ -70,12 +68,12 @@ class TestRDSSubnetGroup(TestBase):
         _test_runtime_properties = {
             'resource_config': {
                 'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
-                'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group for Dev',
+                'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
                 'DBSubnetGroupName': 'zzzzzz-subnet-group'
             }
         }
         _ctx = self.get_mock_ctx(
-            _test_name,
+            'test_create',
             test_properties=_test_node_properties,
             test_runtime_properties=_test_runtime_properties,
             type_hierarchy=SUBNET_GROUP_TH
@@ -109,7 +107,7 @@ class TestRDSSubnetGroup(TestBase):
                 region_name='zzz'
             )
             fake_client.create_db_subnet_group.assert_called_with(
-                DBSubnetGroupDescription='MySQL5.7 Subnet Group for Dev',
+                DBSubnetGroupDescription='MySQL5.7 Subnet Group',
                 DBSubnetGroupName='zzzzzz-subnet-group',
                 SubnetIds=['subnet-xxxxxxxx', 'subnet-yyyyyyyy']
             )
@@ -123,7 +121,65 @@ class TestRDSSubnetGroup(TestBase):
                     'aws_resource_id': 'DBSubnetGroupName',
                     'resource_config': {
                         'DBSubnetGroupDescription':
-                                        'MySQL5.7 Subnet Group for Dev',
+                                        'MySQL5.7 Subnet Group',
+                        'DBSubnetGroupName': 'zzzzzz-subnet-group',
+                        'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy']
+                    }
+                }
+            )
+
+    def test_delete(self):
+        _test_node_properties = {
+            'use_external_resource': False,
+            'resource_id': 'zzzzzz-subnet-group',
+            'client_config': {
+                'aws_access_key_id': 'xxx',
+                'aws_secret_access_key': 'yyy',
+                'region_name': 'zzz'
+            }
+        }
+        _test_runtime_properties = {
+            'resource_config': {
+                'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
+                'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
+                'DBSubnetGroupName': 'zzzzzz-subnet-group'
+            }
+        }
+        _ctx = self.get_mock_ctx(
+            'test_delete',
+            test_properties=_test_node_properties,
+            test_runtime_properties=_test_runtime_properties,
+            type_hierarchy=SUBNET_GROUP_TH
+        )
+
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            fake_client.delete_db_subnet_group = MagicMock(return_value={
+                'ResponseMetadata': {
+                    'RetryAttempts': 0,
+                    'HTTPStatusCode': 200,
+                    'RequestId': 'xxxxxxxx',
+                    'HTTPHeaders': {
+                        'x-amzn-requestid': 'xxxxxxxx',
+                        'date': 'Fri, 28 Apr 2017 14:21:50 GMT',
+                        'content-length': '217',
+                        'content-type': 'text/xml'
+                    }
+                }
+            })
+            subnet_group.delete(ctx=_ctx, resource_config=None, iface=None)
+
+            fake_client.delete_db_subnet_group.assert_called_with(
+                DBSubnetGroupName='zzzzzz-subnet-group'
+            )
+
+            self.assertEqual(
+                _ctx.instance.runtime_properties, {
+                    '__deleted': True,
+                    'resource_config': {
+                        'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
                         'DBSubnetGroupName': 'zzzzzz-subnet-group',
                         'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy']
                     }

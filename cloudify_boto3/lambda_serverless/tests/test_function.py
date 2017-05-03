@@ -20,8 +20,10 @@ from cloudify.mocks import MockCloudifyContext, MockRelationshipContext
 
 PATCH_PREFIX = 'cloudify_boto3.lambda_serverless.resources.function.'
 # Constants
-SUBNET_GROUP_I = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Invoke']
-SUBNET_GROUP_F = ['cloudify.nodes.Root', 'cloudify.nodes.aws.lambda.Function']
+SUBNET_GROUP_I = ['cloudify.nodes.Root',
+                  'cloudify.nodes.aws.lambda.Invoke']
+SUBNET_GROUP_F = ['cloudify.nodes.Root',
+                  'cloudify.nodes.aws.lambda.Function']
 
 
 class TestLambdaFunction(TestBase):
@@ -177,6 +179,7 @@ class TestLambdaFunction(TestBase):
         iface = MagicMock()
         function.delete(iface, None)
         self.assertTrue(iface.delete.called)
+
 
 if __name__ == '__main__':
     unittest.main()
