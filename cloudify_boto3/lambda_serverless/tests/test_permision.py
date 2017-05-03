@@ -62,6 +62,7 @@ class TestLambdaPermission(TestBase):
                                               source,
                                               target,
                                               None)
+
     def test_class_properties(self):
         ctx = self._get_ctx()
         with patch(PATCH_PREFIX + 'LambdaBase'):
@@ -108,25 +109,32 @@ class TestLambdaPermission(TestBase):
             utils.get_resource_id = MagicMock(return_value=True)
             res_config = {'param': 'params'}
             permission.prepare(ctx, res_config)
-            self.assertEqual(ctx.instance.runtime_properties['resource_config'],
-                             res_config)
+            self.assertEqual(
+                ctx.instance.runtime_properties['resource_config'],
+                res_config
+            )
 
         with patch(PATCH_PREFIX + 'utils') as utils:
             utils.get_resource_id = MagicMock(return_value=False)
             res_config = {'param': 'params'}
             permission.prepare(ctx, res_config)
-            self.assertEqual(ctx.instance.runtime_properties['resource_config'],
-                             res_config)
+            self.assertEqual(
+                ctx.instance.runtime_properties['resource_config'],
+                res_config
+            )
             self.assertTrue(utils.update_resource_id.called)
 
         with patch(PATCH_PREFIX + 'utils') as utils:
             utils.get_resource_id = MagicMock(return_value=False)
             res_config = {'param': 'params', 'StatementId': 'test_id'}
             permission.prepare(ctx, res_config)
-            self.assertEqual(ctx.instance.runtime_properties['resource_config'],
-                             res_config)
+            self.assertEqual(
+                ctx.instance.runtime_properties['resource_config'],
+                res_config
+            )
             self.assertTrue(utils.update_resource_id.called)
-            utils.update_resource_id.assert_called_with(ctx.instance, 'test_id')
+            utils.update_resource_id.assert_called_with(ctx.instance,
+                                                        'test_id')
 
     def test_create(self):
         ctx = self._get_ctx()
@@ -175,6 +183,7 @@ class TestLambdaPermission(TestBase):
 
     def test_detach_from(self):
         self.assertIsNone(permission.detach_from(None, None, None))
+
 
 if __name__ == '__main__':
     unittest.main()

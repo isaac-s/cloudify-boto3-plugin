@@ -14,10 +14,12 @@
 
 from mock import MagicMock
 import unittest
+import copy
 from functools import wraps
 
 from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
+from cloudify.manager import DirtyTrackingDict
 from botocore.exceptions import UnknownServiceError
 from botocore.exceptions import ClientError
 
@@ -39,6 +41,14 @@ class TestBase(unittest.TestCase):
         current_ctx.clear()
         super(TestBase, self).tearDown()
 
+    def _to_DirtyTrackingDict(self, origin):
+        if not origin:
+            origin = {}
+        dirty_dict = DirtyTrackingDict()
+        for k in origin:
+            dirty_dict[k] = copy.deepcopy(origin[k])
+        return dirty_dict
+
     def get_mock_ctx(self,
                      test_name,
                      test_properties=None,
@@ -49,9 +59,11 @@ class TestBase(unittest.TestCase):
         ctx = MockCloudifyContext(
             node_id=test_name,
             deployment_id=test_name,
-            properties=test_properties,
-            runtime_properties=test_runtime_properties,
-            relationships=test_relationships,
+            properties=copy.deepcopy(test_properties),
+            runtime_properties=self._to_DirtyTrackingDict(
+                test_runtime_properties
+            ),
+            relationships=copy.deepcopy(test_relationships),
             operation={'retry_number': 0}
         )
 
@@ -69,10 +81,10 @@ class TestBase(unittest.TestCase):
 
         ctx = MockCloudifyContext(
             deployment_id=deployment_name,
-            properties=test_properties,
+            properties=copy.deepcopy(test_properties),
             source=test_source,
             target=test_target,
-            runtime_properties=test_runtime_properties)
+            runtime_properties=copy.deepcopy(test_runtime_properties))
         return ctx
 
     def _fake_rds(self, fake_client, client_type):

@@ -26,6 +26,24 @@ from cloudify_boto3.common.tests.test_base import TestBase
 SUBNET_GROUP_TH = ['cloudify.nodes.Root',
                    'cloudify.nodes.aws.rds.SubnetGroup']
 
+NODE_PROPERTIES = {
+    'use_external_resource': False,
+    'resource_id': 'zzzzzz-subnet-group',
+    'client_config': {
+        'aws_access_key_id': 'xxx',
+        'aws_secret_access_key': 'yyy',
+        'region_name': 'zzz'
+    }
+}
+
+RUNTIME_PROPERTIES = {
+    'resource_config': {
+        'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
+        'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
+        'DBSubnetGroupName': 'zzzzzz-subnet-group'
+    }
+}
+
 
 class TestRDSSubnetGroup(TestBase):
 
@@ -56,26 +74,10 @@ class TestRDSSubnetGroup(TestBase):
             fake_boto.assert_called_with('rds', region_name=None)
 
     def test_create(self):
-        _test_node_properties = {
-            'use_external_resource': False,
-            'resource_id': 'zzzzzz-subnet-group',
-            'client_config': {
-                'aws_access_key_id': 'xxx',
-                'aws_secret_access_key': 'yyy',
-                'region_name': 'zzz'
-            }
-        }
-        _test_runtime_properties = {
-            'resource_config': {
-                'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
-                'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
-                'DBSubnetGroupName': 'zzzzzz-subnet-group'
-            }
-        }
         _ctx = self.get_mock_ctx(
             'test_create',
-            test_properties=_test_node_properties,
-            test_runtime_properties=_test_runtime_properties,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES,
             type_hierarchy=SUBNET_GROUP_TH
         )
 
@@ -87,7 +89,7 @@ class TestRDSSubnetGroup(TestBase):
                 return_value={'DBSubnetGroups': [{
                     'SubnetGroupStatus': 'Complete',
                     'DBSubnetGroup': {
-                        'DBSubnetGroupName': 'DBSubnetGroupName',
+                        'DBSubnetGroupName': 'zzzzzz-subnet-group',
                         'DBSubnetGroupArn': 'DBSubnetGroupArn'
                     }
                 }]}
@@ -95,7 +97,7 @@ class TestRDSSubnetGroup(TestBase):
 
             fake_client.create_db_subnet_group = MagicMock(
                 return_value={'DBSubnetGroup': {
-                    'DBSubnetGroupName': 'DBSubnetGroupName',
+                    'DBSubnetGroupName': 'zzzzzz-subnet-group',
                     'DBSubnetGroupArn': 'DBSubnetGroupArn'}
                 }
             )
@@ -112,13 +114,13 @@ class TestRDSSubnetGroup(TestBase):
                 SubnetIds=['subnet-xxxxxxxx', 'subnet-yyyyyyyy']
             )
             fake_client.describe_db_subnet_groups.assert_called_with(
-                DBSubnetGroupName='DBSubnetGroupName'
+                DBSubnetGroupName='zzzzzz-subnet-group'
             )
 
             self.assertEqual(
                 _ctx.instance.runtime_properties, {
                     'aws_resource_arn': 'DBSubnetGroupArn',
-                    'aws_resource_id': 'DBSubnetGroupName',
+                    'aws_resource_id': 'zzzzzz-subnet-group',
                     'resource_config': {
                         'DBSubnetGroupDescription':
                                         'MySQL5.7 Subnet Group',
@@ -128,27 +130,30 @@ class TestRDSSubnetGroup(TestBase):
                 }
             )
 
+    def test_prepare(self):
+        _ctx = self.get_mock_ctx(
+            'test_prepare',
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES,
+            type_hierarchy=SUBNET_GROUP_TH
+        )
+
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            subnet_group.prepare(ctx=_ctx, resource_config=None, iface=None)
+            self.assertEqual(
+                _ctx.instance.runtime_properties, {
+                    'resource_config': {}
+                }
+            )
+
     def test_delete(self):
-        _test_node_properties = {
-            'use_external_resource': False,
-            'resource_id': 'zzzzzz-subnet-group',
-            'client_config': {
-                'aws_access_key_id': 'xxx',
-                'aws_secret_access_key': 'yyy',
-                'region_name': 'zzz'
-            }
-        }
-        _test_runtime_properties = {
-            'resource_config': {
-                'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
-                'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
-                'DBSubnetGroupName': 'zzzzzz-subnet-group'
-            }
-        }
         _ctx = self.get_mock_ctx(
             'test_delete',
-            test_properties=_test_node_properties,
-            test_runtime_properties=_test_runtime_properties,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES,
             type_hierarchy=SUBNET_GROUP_TH
         )
 
@@ -185,6 +190,79 @@ class TestRDSSubnetGroup(TestBase):
                     }
                 }
             )
+
+    def _reprepere_relation_ships(self, node_id):
+        _source_ctx = self.get_mock_ctx(
+            'test_prepare_assoc_source',
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES,
+            type_hierarchy=SUBNET_GROUP_TH
+        )
+
+        _target_ctx = self.get_mock_ctx(
+            'test_prepare_assoc_target',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_assoc_resource',
+                'aws_resource_id': 'aws_resource_mock_id',
+                '_set_changed': True
+            },
+            type_hierarchy=['cloudify.nodes.Root',
+                            'cloudify.aws.nodes.Subnet']
+        )
+
+        _ctx = self.get_mock_relationship_ctx(
+            node_id,
+            test_properties={},
+            test_runtime_properties={},
+            test_source=_source_ctx,
+            test_target=_target_ctx,
+            type_hierarchy=None
+        )
+
+        return _source_ctx, _target_ctx, _ctx
+
+    def test_prepare_assoc(self):
+        _source_ctx, _target_ctx, _ctx = self._reprepere_relation_ships(
+            'test_prepare_assoc'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            subnet_group.prepare_assoc(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(_source_ctx.instance.runtime_properties, {
+                'resource_config': {
+                    'SubnetIds': [
+                        'subnet-xxxxxxxx',
+                        'subnet-yyyyyyyy',
+                        'aws_resource_mock_id'
+                    ],
+                    'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
+                    'DBSubnetGroupName': 'zzzzzz-subnet-group'
+                }
+            })
+
+    def test_detach_from(self):
+        _source_ctx, _target_ctx, _ctx = self._reprepere_relation_ships(
+            'test_detach_from'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            subnet_group.detach_from(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(_source_ctx.instance.runtime_properties, {
+                'resource_config': {
+                    'SubnetIds': ['subnet-xxxxxxxx', 'subnet-yyyyyyyy'],
+                    'DBSubnetGroupDescription': 'MySQL5.7 Subnet Group',
+                    'DBSubnetGroupName': 'zzzzzz-subnet-group'
+                }
+            })
 
 
 if __name__ == '__main__':
