@@ -13,9 +13,10 @@
 #    * limitations under the License.
 
 from cloudify_boto3.rds.resources import option_group
-from botocore.exceptions import UnknownServiceError
+from botocore.exceptions import UnknownServiceError, ClientError
+from cloudify.exceptions import OperationRetry
 
-from mock import patch
+from mock import patch, MagicMock
 import unittest
 
 from cloudify.state import current_ctx
@@ -25,6 +26,29 @@ from cloudify_boto3.common.tests.test_base import TestBase
 # Constants
 OPTION_GROUP_TH = ['cloudify.nodes.Root',
                    'cloudify.nodes.aws.rds.OptionGroup']
+
+RUNTIME_PROPERTIES_AFTER_CREATE = {
+    'aws_resource_arn': 'OptionGroupArn',
+    'aws_resource_id': 'dev-db-option-group',
+    'resource_config': {}
+}
+
+NODE_PROPERTIES = {
+    'use_external_resource': False,
+    'resource_id': 'dev-db-option-group',
+    'resource_config': {
+        'kwargs': {
+            'EngineName': 'mysql',
+            'MajorEngineVersion': '5.7',
+            'OptionGroupDescription': 'MySQL5.7 Option Group for Dev'
+        }
+    },
+    'client_config': {
+        'aws_access_key_id': 'xxx',
+        'aws_secret_access_key': 'yyy',
+        'region_name': 'zzz'
+    }
+}
 
 
 class TestRDSOptionGroup(TestBase):
@@ -57,6 +81,252 @@ class TestRDSOptionGroup(TestBase):
             )
 
             fake_boto.assert_called_with('rds', region_name=None)
+
+    def test_create(self):
+        _test_name = 'test_create'
+        _test_runtime_properties = {
+            'resource_config': {}
+        }
+        _ctx = self.get_mock_ctx(
+            _test_name,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=_test_runtime_properties,
+            type_hierarchy=OPTION_GROUP_TH
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            fake_client.create_option_group = MagicMock(return_value={
+                'OptionGroup': {
+                    'OptionGroupName': 'dev-db-option-group',
+                    'OptionGroupArn': 'OptionGroupArn'
+                }
+            })
+            option_group.create(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            fake_boto.assert_called_with(
+                'rds', aws_access_key_id='xxx', aws_secret_access_key='yyy',
+                region_name='zzz'
+            )
+            fake_client.create_option_group.assert_called_with(
+                EngineName='mysql',
+                MajorEngineVersion='5.7',
+                OptionGroupDescription='MySQL5.7 Option Group for Dev',
+                OptionGroupName='dev-db-option-group'
+            )
+
+            self.assertEqual(
+                _ctx.instance.runtime_properties,
+                RUNTIME_PROPERTIES_AFTER_CREATE
+            )
+
+    def test_delete(self):
+        _test_name = 'test_delete'
+        _ctx = self.get_mock_ctx(
+            _test_name,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES_AFTER_CREATE,
+            type_hierarchy=OPTION_GROUP_TH
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            fake_client.delete_option_group = MagicMock(
+                return_value={}
+            )
+            option_group.delete(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            fake_boto.assert_called_with(
+                'rds', aws_access_key_id='xxx', aws_secret_access_key='yyy',
+                region_name='zzz'
+            )
+            fake_client.delete_option_group.assert_called_with(
+                OptionGroupName='dev-db-option-group'
+            )
+
+            self.assertEqual(
+                _ctx.instance.runtime_properties, {
+                    'aws_resource_arn': 'OptionGroupArn',
+                    '__deleted': True,
+                    'aws_resource_id': 'dev-db-option-group',
+                    'resource_config': {}
+                }
+            )
+
+    def test_immortal_delete(self):
+        _test_name = 'test_delete'
+        _ctx = self.get_mock_ctx(
+            _test_name,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES_AFTER_CREATE,
+            type_hierarchy=OPTION_GROUP_TH
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            fake_client.delete_option_group = MagicMock(
+                return_value={}
+            )
+
+            fake_client.describe_option_groups = MagicMock(
+                return_value={
+                    'OptionGroupsList': [{
+                        'OptionGroupName': 'dev-db-option-group',
+                        'OptionGroupArn': 'OptionGroupArn'
+                    }]
+                }
+            )
+            with self.assertRaises(OperationRetry) as error:
+                option_group.delete(
+                    ctx=_ctx, resource_config=None, iface=None
+                )
+
+            self.assertEqual(
+                str(error.exception),
+                (
+                    'RDS Option Group ID# "dev-db-option-group" is still ' +
+                    'in a pending state.'
+                )
+            )
+
+    def test_delete_client_error(self):
+        _test_name = 'test_delete'
+        _ctx = self.get_mock_ctx(
+            _test_name,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES_AFTER_CREATE,
+            type_hierarchy=OPTION_GROUP_TH
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            fake_client.delete_option_group = self._gen_client_error(
+                'test_delete', message='SomeMessage'
+            )
+
+            with self.assertRaises(OperationRetry) as error:
+                option_group.delete(
+                    ctx=_ctx, resource_config=None, iface=None
+                )
+
+            self.assertEqual(
+                str(error.exception), 'SomeMessage'
+            )
+
+    def test_delete_unexpected_client_error(self):
+        _test_name = 'test_delete'
+        _ctx = self.get_mock_ctx(
+            _test_name,
+            test_properties=NODE_PROPERTIES,
+            test_runtime_properties=RUNTIME_PROPERTIES_AFTER_CREATE,
+            type_hierarchy=OPTION_GROUP_TH
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+        with patch('boto3.client', fake_boto):
+            fake_client.delete_option_group = self._gen_client_error(
+                'test_delete', message='SomeMessage', code='InvalidFault'
+            )
+
+            with self.assertRaises(ClientError) as error:
+                option_group.delete(
+                    ctx=_ctx, resource_config=None, iface=None
+                )
+
+            self.assertEqual(
+                str(error.exception), (
+                    'An error occurred (InvalidFault) when calling the ' +
+                    'client_error_test_delete operation: SomeMessage'
+                )
+            )
+
+    def _create_option_relationships(self, node_id):
+        _source_ctx = self.get_mock_ctx(
+            'test_attach_source',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_attach_source',
+                'aws_resource_id': 'aws_resource_mock_id',
+                '_set_changed': True
+            },
+            type_hierarchy=OPTION_GROUP_TH
+        )
+
+        _target_ctx = self.get_mock_ctx(
+            'test_attach_target',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_attach_target',
+                'aws_resource_id': 'aws_target_mock_id',
+            },
+            type_hierarchy=['cloudify.nodes.Root',
+                            'cloudify.nodes.aws.rds.Option']
+        )
+
+        _ctx = self.get_mock_relationship_ctx(
+            node_id,
+            test_properties={},
+            test_runtime_properties={},
+            test_source=_source_ctx,
+            test_target=_target_ctx,
+            type_hierarchy=None
+        )
+
+        return _source_ctx, _target_ctx, _ctx
+
+    def test_attach_to(self):
+        _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
+            'test_attach_to'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            fake_client.modify_option_group = MagicMock(
+                return_value={
+                    'OptionGroup': 'abc'
+                }
+            )
+            option_group.attach_to(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(_target_ctx.instance.runtime_properties, {
+                'aws_resource_id': 'aws_target_mock_id',
+                'resource_id': 'prepare_attach_target'
+            })
+            fake_client.modify_option_group.assert_called_with(
+                ApplyImmediately=True,
+                OptionGroupName='aws_resource_mock_id',
+                OptionsToInclude=[{'OptionName': 'aws_target_mock_id'}]
+            )
+
+    def test_detach_from(self):
+        _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
+            'test_detach_from'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            fake_client.modify_option_group = MagicMock(
+                return_value={
+                    'OptionGroup': 'abc'
+                }
+            )
+            option_group.detach_from(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(_target_ctx.instance.runtime_properties, {
+                'aws_resource_id': 'aws_target_mock_id',
+                'resource_id': 'prepare_attach_target'
+            })
+            fake_client.modify_option_group.assert_called_with(
+                ApplyImmediately=True,
+                OptionGroupName='aws_resource_mock_id',
+                OptionsToRemove=['aws_target_mock_id']
+            )
 
 
 if __name__ == '__main__':

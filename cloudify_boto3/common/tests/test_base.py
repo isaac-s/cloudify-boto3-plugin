@@ -87,27 +87,40 @@ class TestBase(unittest.TestCase):
             runtime_properties=copy.deepcopy(test_runtime_properties))
         return ctx
 
-    def _gen_client_error(self, name):
+    def _gen_client_error(self, name,
+                          code='InvalidOptionGroupStateFault',
+                          message='SomeThingIsGoingWrong'):
         return MagicMock(
             side_effect=ClientError(
-                error_response={"Error": {}},
+                error_response={"Error": {
+                    'Code': code,
+                    'Message': message
+                }},
                 operation_name="client_error_" + name
             )
         )
 
-    def _fake_rds(self, fake_client, client_type):
-        unknow_error_mock = MagicMock(
+    def _get_unknowservice(self, client_type):
+        return MagicMock(
             side_effect=UnknownServiceError(
                 service_name=client_type,
                 known_service_names=['rds']
             )
         )
 
-        fake_client.create_db_instance_read_replica = unknow_error_mock
-        fake_client.create_db_instance = unknow_error_mock
-        fake_client.create_db_parameter_group = unknow_error_mock
-        fake_client.create_db_subnet_group = unknow_error_mock
-        fake_client.create_option_group = unknow_error_mock
+    def _fake_rds(self, fake_client, client_type):
+
+        fake_client.create_db_instance_read_replica = self._get_unknowservice(
+            client_type
+        )
+        fake_client.create_db_instance = self._get_unknowservice(client_type)
+        fake_client.create_db_parameter_group = self._get_unknowservice(
+            client_type
+        )
+        fake_client.create_db_subnet_group = self._get_unknowservice(
+            client_type
+        )
+        fake_client.create_option_group = self._get_unknowservice(client_type)
 
         fake_client.describe_db_parameter_groups = self._gen_client_error(
             "db_parameter_groups"
@@ -119,10 +132,20 @@ class TestBase(unittest.TestCase):
             "option_groups"
         )
 
-        fake_client.modify_db_parameter_group = unknow_error_mock
+        fake_client.modify_db_parameter_group = self._get_unknowservice(
+            client_type
+        )
+        fake_client.modify_option_group = self._get_unknowservice(
+            client_type
+        )
 
-        fake_client.delete_db_parameter_group = unknow_error_mock
-        fake_client.delete_db_subnet_group = unknow_error_mock
+        fake_client.delete_db_parameter_group = self._get_unknowservice(
+            client_type
+        )
+        fake_client.delete_db_subnet_group = self._get_unknowservice(
+            client_type
+        )
+        fake_client.delete_option_group = self._get_unknowservice(client_type)
 
     def make_client_function(self, fun_name,
                              return_value=None,
