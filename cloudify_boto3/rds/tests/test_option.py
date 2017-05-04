@@ -94,14 +94,15 @@ class TestRDSOption(TestBase):
                 }
             )
 
-    def _create_option_relationships(self, node_id):
+    def _create_option_relationships(self, node_id, type_hierarchy):
         _source_ctx = self.get_mock_ctx(
             'test_attach_source',
             test_properties={},
             test_runtime_properties={
                 'resource_id': 'prepare_attach_source',
                 'aws_resource_id': 'aws_resource_mock_id',
-                '_set_changed': True
+                '_set_changed': True,
+                'resource_config': {}
             },
             type_hierarchy=PARAMETER_OPTION_TH
         )
@@ -113,8 +114,7 @@ class TestRDSOption(TestBase):
                 'resource_id': 'prepare_attach_target',
                 'aws_resource_id': 'aws_target_mock_id',
             },
-            type_hierarchy=['cloudify.nodes.Root',
-                            'cloudify.nodes.aws.rds.OptionGroup']
+            type_hierarchy=type_hierarchy
         )
 
         _ctx = self.get_mock_relationship_ctx(
@@ -130,7 +130,8 @@ class TestRDSOption(TestBase):
 
     def test_attach_to(self):
         _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
-            'test_attach_to'
+            'test_attach_to',
+            ['cloudify.nodes.Root', 'cloudify.nodes.aws.rds.OptionGroup']
         )
         current_ctx.set(_ctx)
         fake_boto, fake_client = self.fake_boto_client('rds')
@@ -148,6 +149,7 @@ class TestRDSOption(TestBase):
                 _source_ctx.instance.runtime_properties, {
                     '_set_changed': True,
                     'aws_resource_id': 'aws_resource_mock_id',
+                    'resource_config': {},
                     'resource_id': 'prepare_attach_source'
                 }
             )
@@ -157,9 +159,33 @@ class TestRDSOption(TestBase):
                 OptionsToInclude=[{'OptionName': 'aws_target_mock_id'}]
             )
 
+    def test_attach_to_security_group(self):
+        _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
+            'test_attach_to',
+            ['cloudify.nodes.Root', 'cloudify.aws.nodes.SecurityGroup']
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            option.attach_to(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(
+                _source_ctx.instance.runtime_properties, {
+                    '_set_changed': True,
+                    'aws_resource_id': 'aws_resource_mock_id',
+                    'resource_config': {
+                        'VpcSecurityGroupMemberships': ['aws_target_mock_id']
+                    },
+                    'resource_id': 'prepare_attach_source'
+                }
+            )
+
     def test_detach_from(self):
         _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
-            'test_attach_to'
+            'test_attach_to',
+            ['cloudify.nodes.Root', 'cloudify.nodes.aws.rds.OptionGroup']
         )
         current_ctx.set(_ctx)
         fake_boto, fake_client = self.fake_boto_client('rds')
@@ -176,6 +202,7 @@ class TestRDSOption(TestBase):
             self.assertEqual(
                 _source_ctx.instance.runtime_properties, {
                     '_set_changed': True,
+                    'resource_config': {},
                     'aws_resource_id': 'aws_resource_mock_id',
                     'resource_id': 'prepare_attach_source'
                 }
