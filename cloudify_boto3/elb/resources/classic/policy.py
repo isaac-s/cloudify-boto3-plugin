@@ -56,6 +56,8 @@ class ELBClassicPolicy(ELBBase):
         props = self.properties
         if not props:
             return None
+
+        # pylint: disable=E1136
         return props['State']['Code']
 
     def create(self, params):
