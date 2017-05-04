@@ -195,6 +195,20 @@ def find_rel_by_node_type(node_instance, node_type):
     return rels[0] if len(rels) > 0 else None
 
 
+def find_rels_by_node_name(node_instance, node_name):
+    '''
+        Finds all specified relationships of the Cloudify
+        instance where the related node type is of a specified type.
+    :param `cloudify.context.NodeInstanceContext` node_instance:
+        Cloudify node instance.
+    :param str node_bane: Cloudify node name to search
+        node_instance.relationships for.
+    :returns: List of Cloudify relationships
+    '''
+    return [x for x in node_instance.relationships
+            if node_name in x.target.node.id]
+
+
 def is_node_type(node, node_type):
     '''
         Checks if a node is of a given node type.
@@ -217,3 +231,45 @@ def get_ancestor_by_type(inst, node_type):
     if node_type in rel.target.node.type_hierarchy:
         return rel.target
     return get_ancestor_by_type(rel.target.instance, node_type)
+
+
+def add_resources_from_rels(node_instance, node_type, current_list):
+    '''
+        Updates a resource list with relationships same target types
+    :param `cloudify.context.NodeInstanceContext` inst: Cloudify instance
+    :param string node_type: Node type name
+    :param current_list: List of IDs
+    :return: updated list
+    '''
+    resources = \
+        find_rels_by_node_type(
+            node_instance,
+            node_type)
+    for resource in resources:
+        resource_id = \
+            resource.target.instance.runtime_properties[
+                constants.EXTERNAL_RESOURCE_ID]
+        if resource_id not in current_list:
+            current_list.append(resource_id)
+    return current_list
+
+
+def find_resource_id_by_type(node_instance, node_type):
+    '''
+        Finds the resource_id of a single node,
+        which is connected via a relationship.
+    :param `cloudify.context.NodeInstanceContext` inst: Cloudify instance
+    :param string node_type: Node type name
+    :return: None or the resource id
+    '''
+
+    targ = \
+        find_rel_by_node_type(
+            node_instance,
+            node_type)
+    if targ:
+        resource_id = \
+            targ.target.instance.runtime_properties.get(
+                constants.EXTERNAL_RESOURCE_ID)
+        return resource_id
+    return None
