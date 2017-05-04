@@ -14,7 +14,7 @@
 
 from cloudify_boto3.rds.resources import option
 
-from mock import patch
+from mock import patch, MagicMock
 import unittest
 
 from cloudify.state import current_ctx
@@ -92,6 +92,98 @@ class TestRDSOption(TestBase):
                         "Port": 21212
                     }
                 }
+            )
+
+    def _create_option_relationships(self, node_id):
+        _source_ctx = self.get_mock_ctx(
+            'test_attach_source',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_attach_source',
+                'aws_resource_id': 'aws_resource_mock_id',
+                '_set_changed': True
+            },
+            type_hierarchy=PARAMETER_OPTION_TH
+        )
+
+        _target_ctx = self.get_mock_ctx(
+            'test_attach_target',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_attach_target',
+                'aws_resource_id': 'aws_target_mock_id',
+            },
+            type_hierarchy=['cloudify.nodes.Root',
+                            'cloudify.nodes.aws.rds.OptionGroup']
+        )
+
+        _ctx = self.get_mock_relationship_ctx(
+            node_id,
+            test_properties={},
+            test_runtime_properties={},
+            test_source=_source_ctx,
+            test_target=_target_ctx,
+            type_hierarchy=None
+        )
+
+        return _source_ctx, _target_ctx, _ctx
+
+    def test_attach_to(self):
+        _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
+            'test_attach_to'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            fake_client.modify_option_group = MagicMock(
+                return_value={
+                    'OptionGroup': 'abc'
+                }
+            )
+            option.attach_to(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(
+                _source_ctx.instance.runtime_properties, {
+                    '_set_changed': True,
+                    'aws_resource_id': 'aws_resource_mock_id',
+                    'resource_id': 'prepare_attach_source'
+                }
+            )
+            fake_client.modify_option_group.assert_called_with(
+                ApplyImmediately=True,
+                OptionGroupName='aws_target_mock_id',
+                OptionsToInclude=[{'OptionName': 'aws_target_mock_id'}]
+            )
+
+    def test_detach_from(self):
+        _source_ctx, _target_ctx, _ctx = self._create_option_relationships(
+            'test_attach_to'
+        )
+        current_ctx.set(_ctx)
+        fake_boto, fake_client = self.fake_boto_client('rds')
+
+        with patch('boto3.client', fake_boto):
+            fake_client.modify_option_group = MagicMock(
+                return_value={
+                    'OptionGroup': 'abc'
+                }
+            )
+            option.detach_from(
+                ctx=_ctx, resource_config=None, iface=None
+            )
+            self.assertEqual(
+                _source_ctx.instance.runtime_properties, {
+                    '_set_changed': True,
+                    'aws_resource_id': 'aws_resource_mock_id',
+                    'resource_id': 'prepare_attach_source'
+                }
+            )
+            fake_client.modify_option_group.assert_called_with(
+                ApplyImmediately=True,
+                OptionGroupName='aws_target_mock_id',
+                OptionsToRemove=[{'OptionName': 'aws_target_mock_id'}]
             )
 
 
