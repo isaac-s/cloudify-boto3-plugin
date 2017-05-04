@@ -87,61 +87,42 @@ class TestBase(unittest.TestCase):
             runtime_properties=copy.deepcopy(test_runtime_properties))
         return ctx
 
+    def _gen_client_error(self, name):
+        return MagicMock(
+            side_effect=ClientError(
+                error_response={"Error": {}},
+                operation_name="client_error_" + name
+            )
+        )
+
     def _fake_rds(self, fake_client, client_type):
-            fake_client.create_db_parameter_group = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
+        unknow_error_mock = MagicMock(
+            side_effect=UnknownServiceError(
+                service_name=client_type,
+                known_service_names=['rds']
             )
-            fake_client.create_option_group = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.describe_option_groups = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.create_db_instance_read_replica = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.create_db_instance = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.modify_db_parameter_group = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.create_db_subnet_group = MagicMock(
-                side_effect=UnknownServiceError(
-                    service_name=client_type,
-                    known_service_names=['rds']
-                )
-            )
-            fake_client.describe_db_subnet_groups = MagicMock(
-                side_effect=ClientError(
-                    error_response={"Error": {}},
-                    operation_name="describe_db_subnet_groups"
-                )
-            )
-            fake_client.delete_db_subnet_group = MagicMock(
-                side_effect=ClientError(
-                    error_response={"Error": {}},
-                    operation_name="describe_db_subnet_groups"
-                )
-            )
+        )
+
+        fake_client.create_db_instance_read_replica = unknow_error_mock
+        fake_client.create_db_instance = unknow_error_mock
+        fake_client.create_db_parameter_group = unknow_error_mock
+        fake_client.create_db_subnet_group = unknow_error_mock
+        fake_client.create_option_group = unknow_error_mock
+
+        fake_client.describe_db_parameter_groups = self._gen_client_error(
+            "db_parameter_groups"
+        )
+        fake_client.describe_db_subnet_groups = self._gen_client_error(
+            "db_subnet_groups"
+        )
+        fake_client.describe_option_groups = self._gen_client_error(
+            "option_groups"
+        )
+
+        fake_client.modify_db_parameter_group = unknow_error_mock
+
+        fake_client.delete_db_parameter_group = unknow_error_mock
+        fake_client.delete_db_subnet_group = unknow_error_mock
 
     def make_client_function(self, fun_name,
                              return_value=None,
