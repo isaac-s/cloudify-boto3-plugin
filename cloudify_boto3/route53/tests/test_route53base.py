@@ -20,7 +20,6 @@ from cloudify_boto3.route53 import Route53Base
 class TestRoute53Base(TestServiceBase):
 
     def setUp(self):
-        print "setUp"
         self.base = Route53Base("ctx_node", resource_id=True,
                                 client=True, logger=None)
 

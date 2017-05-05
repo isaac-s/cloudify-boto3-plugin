@@ -188,11 +188,11 @@ class TestBase(unittest.TestCase):
             fun.return_value = return_value
         return fake_client
 
-    def get_client_error_exception(self, name):
+    def get_client_error_exception(self, name="Error"):
         return ClientError(error_response={"Error": {}},
                            operation_name=name)
 
-    def get_unknown_service_exception(self, name):
+    def get_unknown_service_exception(self, name="Error"):
         return UnknownServiceError(
             service_name=name,
             known_service_names=[name])
@@ -202,6 +202,9 @@ class TestBase(unittest.TestCase):
         if client_type == "rds":
             self._fake_rds(fake_client, client_type)
         return MagicMock(return_value=fake_client), fake_client
+
+    def mock_return(self, value):
+        return MagicMock(return_value=value)
 
 
 class TestServiceBase(TestBase):
