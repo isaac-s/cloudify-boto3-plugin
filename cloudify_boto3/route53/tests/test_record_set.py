@@ -122,5 +122,6 @@ class TestRecordSet(TestBase):
         res = record_set.detach_from(None)
         self.assertIsNone(res)
 
+
 if __name__ == '__main__':
     unittest.main()

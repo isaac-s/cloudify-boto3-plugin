@@ -21,6 +21,7 @@ from cloudify_boto3.common import constants
 
 PATCH_PREFIX = 'cloudify_boto3.route53.resources.hosted_zone.'
 
+
 class TestHostedZone(TestBase):
     def _get_ctx(self):
         _test_name = 'test_properties'
@@ -211,6 +212,7 @@ class TestHostedZone(TestBase):
         client.describe_availability_zones = self.mock_return(zones)
         res = hosted_zone.detect_vpc_region(client, 'vpc_id')
         self.assertEqual(res, 'regname')
+
 
 if __name__ == '__main__':
     unittest.main()
