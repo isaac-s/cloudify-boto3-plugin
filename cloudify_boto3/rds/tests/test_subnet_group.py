@@ -20,7 +20,8 @@ import unittest
 
 from cloudify.state import current_ctx
 
-from cloudify_boto3.common.tests.test_base import TestBase
+from cloudify_boto3.common.tests.test_base import TestBase, CLIENT_CONFIG
+from cloudify_boto3.common.tests.test_base import DELETE_RESPONSE
 
 # Constants
 SUBNET_GROUP_TH = ['cloudify.nodes.Root',
@@ -29,11 +30,7 @@ SUBNET_GROUP_TH = ['cloudify.nodes.Root',
 NODE_PROPERTIES = {
     'use_external_resource': False,
     'resource_id': 'zzzzzz-subnet-group',
-    'client_config': {
-        'aws_access_key_id': 'xxx',
-        'aws_secret_access_key': 'yyy',
-        'region_name': 'zzz'
-    }
+    'client_config': CLIENT_CONFIG
 }
 
 RUNTIME_PROPERTIES = {
@@ -105,8 +102,7 @@ class TestRDSSubnetGroup(TestBase):
             subnet_group.create(ctx=_ctx, resource_config=None, iface=None)
 
             fake_boto.assert_called_with(
-                'rds', aws_access_key_id='xxx', aws_secret_access_key='yyy',
-                region_name='zzz'
+                'rds', **CLIENT_CONFIG
             )
             fake_client.create_db_subnet_group.assert_called_with(
                 DBSubnetGroupDescription='MySQL5.7 Subnet Group',
@@ -161,19 +157,9 @@ class TestRDSSubnetGroup(TestBase):
         fake_boto, fake_client = self.fake_boto_client('rds')
 
         with patch('boto3.client', fake_boto):
-            fake_client.delete_db_subnet_group = MagicMock(return_value={
-                'ResponseMetadata': {
-                    'RetryAttempts': 0,
-                    'HTTPStatusCode': 200,
-                    'RequestId': 'xxxxxxxx',
-                    'HTTPHeaders': {
-                        'x-amzn-requestid': 'xxxxxxxx',
-                        'date': 'Fri, 28 Apr 2017 14:21:50 GMT',
-                        'content-length': '217',
-                        'content-type': 'text/xml'
-                    }
-                }
-            })
+            fake_client.delete_db_subnet_group = MagicMock(
+                return_value=DELETE_RESPONSE
+            )
             subnet_group.delete(ctx=_ctx, resource_config=None, iface=None)
 
             fake_client.delete_db_subnet_group.assert_called_with(

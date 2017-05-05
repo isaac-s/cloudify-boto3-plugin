@@ -21,7 +21,7 @@ import unittest
 
 from cloudify.state import current_ctx
 
-from cloudify_boto3.common.tests.test_base import TestBase
+from cloudify_boto3.common.tests.test_base import TestBase, CLIENT_CONFIG
 
 # Constants
 OPTION_GROUP_TH = ['cloudify.nodes.Root',
@@ -43,11 +43,7 @@ NODE_PROPERTIES = {
             'OptionGroupDescription': 'MySQL5.7 Option Group for Dev'
         }
     },
-    'client_config': {
-        'aws_access_key_id': 'xxx',
-        'aws_secret_access_key': 'yyy',
-        'region_name': 'zzz'
-    }
+    'client_config': CLIENT_CONFIG
 }
 
 
@@ -106,8 +102,7 @@ class TestRDSOptionGroup(TestBase):
                 ctx=_ctx, resource_config=None, iface=None
             )
             fake_boto.assert_called_with(
-                'rds', aws_access_key_id='xxx', aws_secret_access_key='yyy',
-                region_name='zzz'
+                'rds', **CLIENT_CONFIG
             )
             fake_client.create_option_group.assert_called_with(
                 EngineName='mysql',
@@ -139,8 +134,7 @@ class TestRDSOptionGroup(TestBase):
                 ctx=_ctx, resource_config=None, iface=None
             )
             fake_boto.assert_called_with(
-                'rds', aws_access_key_id='xxx', aws_secret_access_key='yyy',
-                region_name='zzz'
+                'rds', **CLIENT_CONFIG
             )
             fake_client.delete_option_group.assert_called_with(
                 OptionGroupName='dev-db-option-group'

@@ -25,6 +25,26 @@ from botocore.exceptions import ClientError
 
 from cloudify_boto3.common import AWSResourceBase
 
+CLIENT_CONFIG = {
+    'aws_access_key_id': 'xxx',
+    'aws_secret_access_key': 'yyy',
+    'region_name': 'zzz'
+}
+
+DELETE_RESPONSE = {
+    'ResponseMetadata': {
+        'RetryAttempts': 0,
+        'HTTPStatusCode': 200,
+        'RequestId': 'xxxxxxxx',
+        'HTTPHeaders': {
+            'x-amzn-requestid': 'xxxxxxxx',
+            'date': 'Fri, 28 Apr 2017 14:21:50 GMT',
+            'content-length': '217',
+            'content-type': 'text/xml'
+        }
+    }
+}
+
 
 def mock_decorator(*args, **kwargs):
     def decorator(f):
@@ -131,6 +151,9 @@ class TestBase(unittest.TestCase):
         fake_client.describe_option_groups = self._gen_client_error(
             "option_groups"
         )
+        fake_client.describe_db_instances = self._gen_client_error(
+            "db_instances"
+        )
 
         fake_client.modify_db_parameter_group = self._get_unknowservice(
             client_type
@@ -139,6 +162,9 @@ class TestBase(unittest.TestCase):
             client_type
         )
 
+        fake_client.delete_db_instance = self._get_unknowservice(
+            client_type
+        )
         fake_client.delete_db_parameter_group = self._get_unknowservice(
             client_type
         )
