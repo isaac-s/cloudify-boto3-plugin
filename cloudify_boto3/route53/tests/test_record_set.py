@@ -119,8 +119,7 @@ class TestRecordSet(TestBase):
                 'res_id')
 
     def test_detach_from(self):
-        res = record_set.detach_from(None)
-        self.assertIsNone(res)
+        record_set.detach_from(None)
 
 
 if __name__ == '__main__':

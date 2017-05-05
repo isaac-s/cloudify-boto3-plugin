@@ -162,11 +162,16 @@ class TestHostedZone(TestBase):
         hosted_zone.delete(ctx, iface, resource_config, 'rest_type', False)
         self.assertTrue(iface.delete.called)
 
+        # default types skiped
         iface.list_resource_record_sets = self.mock_return([{'Type': 'NS'}])
         hosted_zone.delete(ctx, iface, resource_config, 'rest_type', True)
         self.assertTrue(iface.delete.called)
-        self.assertTrue(iface.change_resource_record_sets.called)
 
+        iface.list_resource_record_sets = self.mock_return([{'Type': 'SOA'}])
+        hosted_zone.delete(ctx, iface, resource_config, 'rest_type', True)
+        self.assertTrue(iface.delete.called)
+
+        # non default
         iface.list_resource_record_sets = self.mock_return([{'Type': None}])
         hosted_zone.delete(ctx, iface, resource_config, 'rest_type', True)
         self.assertTrue(iface.delete.called)
@@ -191,8 +196,7 @@ class TestHostedZone(TestBase):
                 {'VPCId': 'res_id', 'VPCRegion': 'vpc_region'})
 
     def test_detach_from(self):
-        res = hosted_zone.detach_from(None, None, None)
-        self.assertIsNone(res)
+        hosted_zone.detach_from(None, None, None)
 
     def test_detect_vpc_region(self):
         client = MagicMock()
