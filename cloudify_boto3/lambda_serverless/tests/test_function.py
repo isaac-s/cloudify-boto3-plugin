@@ -175,6 +175,40 @@ class TestLambdaFunction(TestBase):
                               'SecurityGroupIds': ['Role']},
                              resource_config['VpcConfig'])
 
+    def test_create_with_download(self):
+        subnettarget = MockRelationshipContext(
+            target=MockCloudifyContext('subnet'))
+        subnettarget.target.node.type_hierarchy = ['cloudify.aws.nodes.Subnet']
+        ctx = MockCloudifyContext("test_create")
+        ctx.download_resource = MagicMock(return_value='abc')
+        with patch(PATCH_PREFIX + 'LambdaBase'),\
+            patch(PATCH_PREFIX + 'utils') as utils,\
+            patch(PATCH_PREFIX + 'path_exists',
+                  MagicMock(return_value=False)),\
+            patch(PATCH_PREFIX + 'os_remove', MagicMock(return_value=True)),\
+            patch(PATCH_PREFIX + 'open',
+                  MagicMock(return_value=StringIO(u"test"))):
+            fun = function.LambdaFunction(ctx)
+            fun.logger = MagicMock()
+            fun.resource_id = 'test_function'
+            fake_client = self.make_client_function(
+                'create_function',
+                return_value={'FunctionArn': 'test_function_arn',
+                              'FunctionName': 'test_function'})
+            fun.client = fake_client
+            resource_config = {'VpcConfig': {'SubnetIds': []},
+                               'Code': {'ZipFile': True}}
+            utils.find_rels_by_node_type = MagicMock(
+                return_value=[subnettarget])
+            utils.get_resource_id = MagicMock(return_value='test_id')
+            utils.find_rel_by_node_type = MagicMock(return_value=subnettarget)
+            utils.get_resource_id = MagicMock(return_value='Role')
+            function.create(ctx, fun, resource_config)
+            self.assertEqual('test', resource_config['Code']['ZipFile'])
+            self.assertEqual({'SubnetIds': ['Role'],
+                              'SecurityGroupIds': ['Role']},
+                             resource_config['VpcConfig'])
+
     def test_delete(self):
         iface = MagicMock()
         function.delete(iface, None)
