@@ -14,7 +14,9 @@
 
 import unittest
 from cloudify_boto3.common.tests.test_base import TestBase
+from mock import MagicMock
 
+from cloudify.mocks import MockCloudifyContext
 from cloudify.state import current_ctx
 from cloudify.exceptions import NonRecoverableError
 
@@ -62,6 +64,79 @@ class TestUtils(TestBase):
 
         with self.assertRaises(NonRecoverableError):
             utils.get_resource_arn(raise_on_missing=True)
+
+    def test_update_resource_id(self):
+        mock_instance = MagicMock()
+
+        mock_instance.runtime_properties = {}
+
+        utils.update_resource_id(mock_instance, 'val')
+
+        self.assertEqual(mock_instance.runtime_properties,
+                         {'aws_resource_id': 'val'})
+
+    def test_update_resource_arn(self):
+        mock_instance = MagicMock()
+
+        mock_instance.runtime_properties = {}
+
+        utils.update_resource_arn(mock_instance, 'val')
+
+        self.assertEqual(mock_instance.runtime_properties,
+                         {'aws_resource_arn': 'val'})
+
+    def test_get_parent_resource_id_empty(self):
+        mock_instance = MagicMock()
+        mock_instance.relationships = []
+
+        self.assertEqual(
+            utils.get_parent_resource_id(mock_instance,
+                                         raise_on_missing=False),
+            None
+        )
+
+    def test_get_parent_resource_id(self):
+        mock_child = MagicMock()
+        mock_child.type_hierarchy = 'some_type'
+        mock_child.target.instance.runtime_properties = {
+            'aws_resource_id': 'a'
+        }
+
+        mock_instance = MockCloudifyContext(
+            'parent_id',
+            deployment_id='deployment_id',
+            properties={'a': 'b'},
+            runtime_properties={'c': 'd'},
+            relationships=[mock_child]
+        )
+
+        current_ctx.set(mock_instance)
+
+        with self.assertRaises(NonRecoverableError):
+            utils.get_parent_resource_id(mock_instance.instance)
+
+        self.assertEqual(
+            utils.get_parent_resource_id(mock_instance.instance, 'some_type'),
+            'a'
+        )
+
+    def test_is_node_type(self):
+
+        node = MagicMock()
+        node.type_hierarchy = ['cloudify.nodes.Root', 'cloudify.nodes.Network']
+
+        self.assertTrue(utils.is_node_type(node, 'cloudify.nodes.Root'))
+        self.assertFalse(utils.is_node_type(node, 'cloudify.nodes.Compute'))
+
+    def test_get_ancestor_resource_id_empty(self):
+        mock_instance = MagicMock()
+        mock_instance.relationships = []
+
+        self.assertEqual(
+            utils.get_ancestor_resource_id(
+                mock_instance, 'cloudify.nodes.Root', raise_on_missing=False
+            ), None
+        )
 
 
 if __name__ == '__main__':

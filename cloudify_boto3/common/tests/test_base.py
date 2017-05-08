@@ -74,7 +74,7 @@ class TestBase(unittest.TestCase):
                      test_properties=None,
                      test_runtime_properties=None,
                      test_relationships=None,
-                     type_hierarchy=None):
+                     type_hierarchy=['cloudify.nodes.Root']):
 
         ctx = MockCloudifyContext(
             node_id=test_name,
@@ -83,7 +83,7 @@ class TestBase(unittest.TestCase):
             runtime_properties=self._to_DirtyTrackingDict(
                 test_runtime_properties
             ),
-            relationships=copy.deepcopy(test_relationships),
+            relationships=test_relationships,
             operation={'retry_number': 0}
         )
 

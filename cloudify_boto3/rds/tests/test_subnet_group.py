@@ -203,7 +203,7 @@ class TestRDSSubnetGroup(TestBase):
             test_runtime_properties={},
             test_source=_source_ctx,
             test_target=_target_ctx,
-            type_hierarchy=None
+            type_hierarchy=['cloudify.nodes.Root']
         )
 
         return _source_ctx, _target_ctx, _ctx

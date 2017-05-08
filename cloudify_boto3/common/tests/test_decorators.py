@@ -166,7 +166,15 @@ class TestDecorators(TestBase):
                           'aws_resource_id': 'res_id',
                           'resource_config': {}})
 
-        # update
+    def test_aws_resource_update_resource_arn(self):
+
+        fake_class_instance = MagicMock()
+        FakeClass = MagicMock(return_value=fake_class_instance)
+
+        @decorators.aws_resource(class_decl=FakeClass)
+        def test_func(*agrs, **kwargs):
+            pass
+
         _ctx = self._gen_decorators_context('test_aws_resource', runtime_prop={
             'aws_resource_id': 'aws_id',
             'resource_config': {}
@@ -181,7 +189,15 @@ class TestDecorators(TestBase):
                           'a': 'b',
                           'resource_config': {}})
 
-        # update
+    def test_aws_resource_update_resource_id(self):
+
+        fake_class_instance = MagicMock()
+        FakeClass = MagicMock(return_value=fake_class_instance)
+
+        @decorators.aws_resource(class_decl=FakeClass)
+        def test_func(*agrs, **kwargs):
+            pass
+
         _ctx = self._gen_decorators_context('test_aws_resource', runtime_prop={
             'aws_resource_id': 'aws_id',
             'resource_config': {}
@@ -254,8 +270,8 @@ class TestDecorators(TestBase):
         mock_func = MagicMock()
 
         @decorators.aws_resource(class_decl=FakeClass)
-        def test_with_mock(*agrs, **kwargs):
-            mock_func(*agrs, **kwargs)
+        def test_with_mock(*args, **kwargs):
+            mock_func(*args, **kwargs)
 
         test_with_mock(ctx=_ctx, aws_resource_id='res_id',
                        runtime_properties={'a': 'b'})
@@ -276,6 +292,86 @@ class TestDecorators(TestBase):
             aws_resource_id='res_id', ctx=_ctx, iface=fake_class_instance,
             resource_config={'c': 'd'}, resource_type='AWS Resource',
             force_operation=True, runtime_properties={'a': 'b'})
+
+    def _gen_decorators_realation_context(self, test_properties=None):
+        _source_ctx = self.get_mock_ctx(
+            'test_source',
+            test_properties=test_properties if test_properties else {},
+            test_runtime_properties={
+                'resource_id': 'prepare_source',
+                'aws_resource_id': 'aws_resource_mock_id',
+                '_set_changed': True,
+                'resource_config': {}
+            },
+            type_hierarchy=['cloudify.nodes.Root']
+        )
+
+        _target_ctx = self.get_mock_ctx(
+            'test_target',
+            test_properties={},
+            test_runtime_properties={
+                'resource_id': 'prepare_target',
+                'aws_resource_id': 'aws_target_mock_id',
+            },
+            type_hierarchy=['cloudify.nodes.Root']
+        )
+
+        _ctx = self.get_mock_relationship_ctx(
+            'test_aws_relationship',
+            test_properties={},
+            test_runtime_properties={},
+            test_source=_source_ctx,
+            test_target=_target_ctx,
+            type_hierarchy=['cloudify.nodes.Root']
+        )
+
+        current_ctx.set(_ctx)
+        return _ctx
+
+    def test_aws_relationship(self):
+        fake_class_instance = MagicMock()
+        FakeClass = MagicMock(return_value=fake_class_instance)
+
+        mock_func = MagicMock()
+
+        @decorators.aws_relationship(class_decl=FakeClass)
+        def test_with_mock(*args, **kwargs):
+            mock_func(*args, **kwargs)
+
+        _ctx = self._gen_decorators_realation_context()
+
+        test_with_mock(ctx=_ctx)
+
+        mock_func.assert_called_with(
+            ctx=_ctx,
+            iface=fake_class_instance, resource_config={},
+            resource_type='AWS Resource')
+
+    def test_aws_relationship_external(self):
+        fake_class_instance = MagicMock()
+        FakeClass = MagicMock(return_value=fake_class_instance)
+
+        mock_func = MagicMock()
+
+        @decorators.aws_relationship(class_decl=FakeClass)
+        def test_with_mock(*args, **kwargs):
+            mock_func(*args, **kwargs)
+
+        _ctx = self._gen_decorators_realation_context(test_properties={
+            'use_external_resource': True
+        })
+
+        test_with_mock(ctx=_ctx)
+
+        mock_func.assert_not_called()
+
+        # force run
+        test_with_mock(ctx=_ctx, force_operation=True)
+
+        mock_func.assert_called_with(
+            ctx=_ctx,
+            iface=fake_class_instance, resource_config={},
+            force_operation=True, resource_type='AWS Resource')
 
 
 if __name__ == '__main__':
