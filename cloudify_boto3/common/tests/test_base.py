@@ -235,6 +235,12 @@ class TestServiceBase(TestBase):
         with self.assertRaises(NotImplementedError):
             self.base.delete(None)
 
+    def test_update_resource_id(self):
+        if not self.base:
+            return
+        self.base.update_resource_id('abc')
+        self.assertEqual(self.base.resource_id, 'abc')
+
 
 class TestAWSResourceBase(TestServiceBase):
 
