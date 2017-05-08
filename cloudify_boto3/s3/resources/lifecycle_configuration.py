@@ -13,12 +13,10 @@
 #    * See the License for the specific language governing permissions and
 #    * limitations under the License.
 '''
-    S3.Bucket
+    S3.Bucket.LifecycleConfiguration
     ~~~~~~~~~~~~~~
-    AWS S3 Bucket interface
+    AWS S3 Bucket Lifecycle Configuration interface
 '''
-# Generic
-import json
 # Cloudify
 from cloudify_boto3.common import decorators, utils
 from cloudify_boto3.s3 import S3Base
@@ -26,15 +24,16 @@ from cloudify_boto3.common.constants import EXTERNAL_RESOURCE_ID
 # Boto
 from botocore.exceptions import ClientError
 
-RESOURCE_TYPE = 'S3 Bucket Policy'
+RESOURCE_TYPE = 'S3 Lifecycle Configuration'
 BUCKET = 'Bucket'
-POLICY = 'Policy'
 BUCKET_TYPE = 'cloudify.nodes.aws.s3.Bucket'
+RULES = 'Rules'
+ID = 'ID'
 
 
-class S3BucketPolicy(S3Base):
+class S3BucketLifecycleConfiguration(S3Base):
     '''
-        AWS S3 Bucket interface
+        AWS S3 Bucket Lifecycle Configuration interface
     '''
     def __init__(self, ctx_node, resource_id=None, client=None, logger=None):
         S3Base.__init__(self, ctx_node, resource_id, client, logger)
@@ -44,13 +43,15 @@ class S3BucketPolicy(S3Base):
     def properties(self):
         '''Gets the properties of an external resource'''
         try:
-            resource = \
-                self.client.get_bucket_policy(
+            resources = \
+                self.client.get_bucket_lifecycle_configuration(
                     {BUCKET: self.resource_id})
         except ClientError:
             pass
         else:
-            return resource[POLICY] if resource else None
+            for resource in resources.get(RULES, []):
+                return resource.get(ID, None)
+        return None
 
     @property
     def status(self):
@@ -62,37 +63,39 @@ class S3BucketPolicy(S3Base):
 
     def create(self, params):
         '''
-            Create a new AWS S3 Bucket Policy.
+            Create a new AWS Bucket Lifecycle Configuration Policy.
         '''
         self.logger.debug('Creating %s with parameters: %s'
                           % (self.type_name, params))
-        res = self.client.put_bucket_policy(**params)
+        res = self.client.put_bucket_lifecycle(**params)
         self.logger.debug('Response: %s' % res)
         return res
 
     def delete(self, params=None):
         '''
-            Deletes an existing AWS S3 Bucket Policy.
+            Deletes an existing AWS Bucket Lifecycle Configuration Policy.
         '''
         if BUCKET not in params.keys():
             params.update({BUCKET: self.resource_id})
         self.logger.debug('Deleting %s with parameters: %s'
                           % (self.type_name, params))
-        self.client.delete_bucket_policy(**params)
+        self.client.delete_bucket_lifecycle(**params)
 
 
 @decorators.aws_resource(resource_type=RESOURCE_TYPE)
 def prepare(ctx, resource_config, **_):
-    '''Prepares an AWS S3 Bucket Policy'''
+    '''Prepares an AWS Bucket Lifecycle Configuration Policy'''
     # Save the parameters
     ctx.instance.runtime_properties['resource_config'] = resource_config
 
 
-@decorators.aws_resource(S3BucketPolicy, RESOURCE_TYPE)
+@decorators.aws_resource(S3BucketLifecycleConfiguration, RESOURCE_TYPE)
 def create(ctx, iface, resource_config, **_):
-    '''Creates an AWS S3 Bucket Policy'''
+    '''Creates an AWS S3 Bucket Lifecycle Configuration'''
+
     params = resource_config.copy()
     bucket_name = params.get(BUCKET)
+
     if not bucket_name:
         targ = utils.find_rel_by_node_type(
             ctx.instance,
@@ -104,19 +107,15 @@ def create(ctx, iface, resource_config, **_):
                 EXTERNAL_RESOURCE_ID
             )
         params[BUCKET] = bucket_name
+
     ctx.instance.runtime_properties[BUCKET] = bucket_name
-    bucket_policy = params.get(POLICY)
-    if not isinstance(bucket_policy, basestring):
-        bucket_policy = json.dumps(bucket_policy)
-        params[POLICY] = bucket_policy
-    ctx.instance.runtime_properties[POLICY] = bucket_policy
     utils.update_resource_id(ctx.instance, bucket_name)
     # Actually create the resource
     iface.create(params)
 
 
-@decorators.aws_resource(S3BucketPolicy, RESOURCE_TYPE,
+@decorators.aws_resource(S3BucketLifecycleConfiguration, RESOURCE_TYPE,
                          ignore_properties=True)
 def delete(iface, resource_config, **_):
-    '''Deletes an AWS S3 Bucket Policy'''
+    '''Deletes an AWS S3 Bucket Lifecycle Configuration'''
     iface.delete(resource_config)
