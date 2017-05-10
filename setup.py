@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='cloudify-boto3-plugin',
-    version='v1.0.0m2',
+    version='1.0',
     license='LICENSE',
     packages=[
         'cloudify_boto3',
