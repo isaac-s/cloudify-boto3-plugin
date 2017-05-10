@@ -26,6 +26,14 @@ dsl_definitions:
 
 node_templates:
 
+  igw:
+    type: cloudify.nodes.aws.ec2.InternetGateway
+    properties:
+      client_config: *client_config
+    relationships:
+    - type: cloudify.relationships.connected_to
+      target: vpc
+
   subnet:
     type: cloudify.nodes.aws.ec2.Subnet
     properties:
