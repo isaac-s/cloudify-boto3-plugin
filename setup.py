@@ -33,7 +33,11 @@ setup(
         'cloudify_boto3.rds',
         'cloudify_boto3.rds.resources',
         'cloudify_boto3.route53',
-        'cloudify_boto3.route53.resources'
+        'cloudify_boto3.route53.resources',
+        'cloudify.boto3.ec2',
+        'cloudify.boto3.ec2.resources',
+        'cloudify.boto3.s3',
+        'cloudify.boto3.s3.resources'
     ],
     description='A Cloudify plugin for AWS',
     install_requires=[
